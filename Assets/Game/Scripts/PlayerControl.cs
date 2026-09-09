@@ -8,6 +8,9 @@ public class PlayerControl : MonoBehaviour {
     [SerializeField]
     private InputManager _inputManager;
 
+    //Camera
+    private Transform _cameraTransform;
+
     //Components
     [SerializeField]
     private Rigidbody _rigidbody;
@@ -85,6 +88,10 @@ public class PlayerControl : MonoBehaviour {
 
     
     private void Awake() {
+        //Assign MainCamera
+        _cameraTransform = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<Transform>();
+
+
         //Assign components to variables
         _rigidbody = GetComponent<Rigidbody>();
         _groundDetector = transform.Find("GroundDetector");
@@ -110,6 +117,10 @@ public class PlayerControl : MonoBehaviour {
 
         //
         _speed = _walkSpeed;
+
+
+        //Hides Cursor
+        HideAndLockCursor();
     }
 
     private void OnEnable() {   
@@ -131,6 +142,12 @@ public class PlayerControl : MonoBehaviour {
         _inputManager.CancelClimbGlideEvent -= OnCancelClimb;
     }
 
+    //Function to hides cursor
+    private void HideAndLockCursor() {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
     //Function to check for movement vector2 value. Listening to 'Move' InputAction
     public void OnMove(Vector2 movement) {
         moveValue = movement;
@@ -142,7 +159,11 @@ public class PlayerControl : MonoBehaviour {
     private void ProcessMove() {
         if (_playerStance == PlayerStance.Stand) {
             if (moveValue.magnitude >= 0.1) {
-                rotationAngle = Mathf.Atan2(moveValue.x, moveValue.y) * Mathf.Rad2Deg;
+                //Old rotationAngle without third person camera
+                //rotationAngle = Mathf.Atan2(moveValue.x, moveValue.y) * Mathf.Rad2Deg;
+
+                //New rotationAngle with third person camera
+                rotationAngle = Mathf.Atan2(moveValue.x, moveValue.y) * Mathf.Rad2Deg + _cameraTransform.eulerAngles.y;
                 smoothAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, rotationAngle, ref _rotationSmoothVelocity, _rotationSmoothTime);
                 transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
                 moveDirection = Quaternion.Euler(0f, rotationAngle, 0f) * Vector3.forward;
