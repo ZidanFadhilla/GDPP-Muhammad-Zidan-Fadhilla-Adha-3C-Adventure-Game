@@ -1,9 +1,9 @@
 {
     "version": 1,
-    "name": "PlayerMovementInput",
+    "name": "PlayerInput",
     "maps": [
         {
-            "name": "Movement",
+            "name": "Gameplay",
             "id": "ee492913-755c-41c5-a15f-f3d94a494f3e",
             "actions": [
                 {
