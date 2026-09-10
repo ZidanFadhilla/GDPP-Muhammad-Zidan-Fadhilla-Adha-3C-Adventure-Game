@@ -2,9 +2,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Events;
 
-[CreateAssetMenu(fileName ="InputManager", menuName = "ScriptableObjects/InputManager")]
-public class InputManager : ScriptableObject, PlayerInput.IGameplayActions
-{
+[CreateAssetMenu(fileName = "InputManager", menuName = "ScriptableObjects/InputManager")]
+public class InputManager : ScriptableObject, PlayerInput.IGameplayActions {
     //Gameplay
     public event UnityAction<Vector2> MoveEvent = delegate { };
     public event UnityAction JumpEvent = delegate { };
@@ -19,7 +18,6 @@ public class InputManager : ScriptableObject, PlayerInput.IGameplayActions
     public event UnityAction AttackEvent = delegate { };
     public event UnityAction AttackCancelledEvent = delegate { };
     public event UnityAction OpenMainMenuEvent = delegate { };
-
 
     //C# wrapper for InputAction schema
     private PlayerInput _playerInput;
@@ -104,4 +102,5 @@ public class InputManager : ScriptableObject, PlayerInput.IGameplayActions
             OpenMainMenuEvent.Invoke();
         }
     }
+
 }

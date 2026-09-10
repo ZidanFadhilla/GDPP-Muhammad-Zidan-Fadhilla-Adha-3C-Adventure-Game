@@ -5,6 +5,10 @@ TagManager:
   serializedVersion: 3
   tags:
   - InputManagers
+  - Camera
+  - CameraControl
+  - FirstPersonCamera
+  - ThirdPersonCamera
   layers:
   - Default
   - TransparentFX

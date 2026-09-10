@@ -9,7 +9,10 @@ public class PlayerControl : MonoBehaviour {
     private InputManager _inputManager;
 
     //Camera
+    [SerializeField]
     private Transform _cameraTransform;
+    [SerializeField]
+    private CameraControl _cameraControl;
 
     //Components
     [SerializeField]
@@ -88,9 +91,9 @@ public class PlayerControl : MonoBehaviour {
 
     
     private void Awake() {
-        //Assign MainCamera
+        //Assign MainCamera dan CameraControl
         _cameraTransform = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<Transform>();
-
+        _cameraControl = GameObject.FindGameObjectWithTag("CameraControl").GetComponent<CameraControl>();
 
         //Assign components to variables
         _rigidbody = GetComponent<Rigidbody>();
@@ -158,20 +161,34 @@ public class PlayerControl : MonoBehaviour {
     //Function to process Vector2 value read through the OnMove function;
     private void ProcessMove() {
         if (_playerStance == PlayerStance.Stand) {
-            if (moveValue.magnitude >= 0.1) {
-                //Old rotationAngle without third person camera
-                //rotationAngle = Mathf.Atan2(moveValue.x, moveValue.y) * Mathf.Rad2Deg;
+            switch(_cameraControl.cameraState) {
+                case CameraState.ThirdPerson:
+                    if (moveValue.magnitude >= 0.1) {
+                        //Old rotationAngle without third person camera
+                        //rotationAngle = Mathf.Atan2(moveValue.x, moveValue.y) * Mathf.Rad2Deg;
 
-                //New rotationAngle with third person camera
-                rotationAngle = Mathf.Atan2(moveValue.x, moveValue.y) * Mathf.Rad2Deg + _cameraTransform.eulerAngles.y;
-                smoothAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, rotationAngle, ref _rotationSmoothVelocity, _rotationSmoothTime);
-                transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
-                moveDirection = Quaternion.Euler(0f, rotationAngle, 0f) * Vector3.forward;
+                        //New rotationAngle with third person camera
+                        rotationAngle = Mathf.Atan2(moveValue.x, moveValue.y) * Mathf.Rad2Deg + _cameraTransform.eulerAngles.y;
+                        smoothAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, rotationAngle, ref _rotationSmoothVelocity, _rotationSmoothTime);
+                        transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
+                        moveDirection = Quaternion.Euler(0f, rotationAngle, 0f) * Vector3.forward;
+                    }
+                    //Case of moveValue = 0 as in stopping (move key no longer pressed)
+                    else {
+                        moveDirection = new Vector3(moveValue.x, 0, moveValue.y);
+                    }
+                    break;
+                case CameraState.FirstPerson:
+                    transform.rotation = Quaternion.Euler(0f, _cameraTransform.eulerAngles.y, 0f);
+                    Vector3 verticalDirection = moveValue.y * transform.forward;
+                    Vector3 horizontalDirection = moveValue.x * transform.right;
+                    moveDirection = verticalDirection + horizontalDirection;
+                    break;
+                default:
+                    Debug.Log("Player has no camera mode");
+                    break;
             }
-            //Case of moveValue = 0 as in stopping (move key no longer pressed)
-            else {
-                moveDirection = new Vector3(moveValue.x, 0, moveValue.y);
-            }
+            
 
             //Implementation of Addforce in FixedUpdate due to new inputAction don't use continual firing of function
             _rigidbody.AddForce(moveDirection * _speed * Time.deltaTime);
@@ -181,7 +198,14 @@ public class PlayerControl : MonoBehaviour {
             Vector3 horizontal = moveValue.x * transform.right;
             Vector3 vertical = moveValue.y * transform.up;
             moveDirection = horizontal + vertical;
-            _rigidbody.AddForce(moveDirection * Time.deltaTime * _climbSpeed);
+            if (moveDirection != Vector3.zero) {
+                _rigidbody.AddForce(moveDirection * Time.deltaTime * _climbSpeed);
+            }
+            else {
+                _rigidbody.linearVelocity = Vector3.zero;
+            }
+            
+            Debug.Log(moveDirection * Time.deltaTime * _climbSpeed);
         }
 
         //Movement with rotation
@@ -232,23 +256,23 @@ public class PlayerControl : MonoBehaviour {
 
         if (isInFrontOfClimbingWall && isNotClimbing) {
             Vector3 offset = (transform.forward * _climbOffset.z) + (Vector3.up * _climbOffset.y);
+            _cameraControl.SetFPSClampedCamera(true, transform.rotation.eulerAngles);
             transform.position = hit.point - offset;
             _playerStance = PlayerStance.Climb;
             _rigidbody.useGravity = false;
         }
     }
 
+
     public void OnCancelClimb() {
         if (_playerStance == PlayerStance.Climb) {
             _playerStance = PlayerStance.Stand;
             _rigidbody.useGravity = true;
             transform.position -= transform.forward * 1f;
+            _cameraControl.SetFPSClampedCamera(false, transform.rotation.eulerAngles);
         }
     }
 
-    private void Update() {
-        //CheckStep();
-    }
 
     private void FixedUpdate() {
         //updating grounded check
