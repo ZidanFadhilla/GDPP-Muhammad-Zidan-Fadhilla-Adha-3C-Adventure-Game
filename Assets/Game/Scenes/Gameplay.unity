@@ -453,6 +453,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1370552f2fb24a743abc45fc77e7fb9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _inputManager: {fileID: 11400000, guid: f5a9b87dbf834124b94ef6475c615f04, type: 2}
   cameraState: 1
   _fpsCamera: {fileID: 0}
   _tpsCamera: {fileID: 0}
@@ -1477,6 +1478,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88890d119e6c179488615be6996183a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _inputManager: {fileID: 11400000, guid: f5a9b87dbf834124b94ef6475c615f04, type: 2}
 --- !u!4 &1601179466
 Transform:
   m_ObjectHideFlags: 0
@@ -5060,7 +5062,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfea0403ce37cb34a8ece85a3cb84ae8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _inputManager: {fileID: 0}
+  _inputManager: {fileID: 11400000, guid: f5a9b87dbf834124b94ef6475c615f04, type: 2}
   _cameraTransform: {fileID: 0}
   _cameraControl: {fileID: 0}
   _rigidbody: {fileID: 0}
