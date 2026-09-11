@@ -314,8 +314,8 @@ public class PlayerControl : MonoBehaviour {
             Debug.Log(velocityMagnitude);
             CheckStep();
             _animator.SetFloat(paramIdVelocity, velocityMagnitude * moveValue.magnitude);
-            _animator.SetFloat(paramIdClimbVelocityX, velocityMagnitude * moveValue.y);
-            _animator.SetFloat(paramIdClimbVelocityY, velocityMagnitude * moveValue.x);
+            _animator.SetFloat(paramIdVelocityZ, velocityMagnitude * moveValue.y);
+            _animator.SetFloat(paramIdVelocityX, velocityMagnitude * moveValue.x);
         }
         else if (_playerStance == PlayerStance.Climb) {
             Vector3 horizontal = moveValue.x * transform.right;
