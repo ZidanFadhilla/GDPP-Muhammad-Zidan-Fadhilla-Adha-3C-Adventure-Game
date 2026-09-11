@@ -44,7 +44,8 @@ public class PlayerControl : MonoBehaviour {
     private Animator _animator;
     [SerializeField]
     private CapsuleCollider _collider;
-
+    [SerializeField]
+    private AudioManager _audioManager;
 
 
     //Stance
@@ -155,6 +156,7 @@ public class PlayerControl : MonoBehaviour {
         _rigidbody = GetComponent<Rigidbody>();
         _collider = GetComponent<CapsuleCollider>();
         _animator = GetComponent<Animator>();
+        _audioManager = GetComponent<AudioManager>();
         _groundDetector = transform.Find("GroundDetector");
         _climbDetector = transform.Find("ClimbDetector");
         _hitDetector = transform.Find("HitDetector");
@@ -456,6 +458,7 @@ public class PlayerControl : MonoBehaviour {
             _playerStance = PlayerStance.Glide;
             _cameraControl.SetFPSClampedCamera(true, transform.rotation.eulerAngles);
             _animator.SetBool(paramIdIsGliding, true);
+            _audioManager.PlayGlideSfx();
         }
     }
     
@@ -466,6 +469,7 @@ public class PlayerControl : MonoBehaviour {
             _playerStance = PlayerStance.Stand;
             _cameraControl.SetFPSClampedCamera(false, transform.rotation.eulerAngles);
             _animator.SetBool(paramIdIsGliding, false);
+            _audioManager.StopGlideSfx();
         }
     }
 
