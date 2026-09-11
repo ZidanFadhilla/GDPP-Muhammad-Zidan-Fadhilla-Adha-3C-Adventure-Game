@@ -32,6 +32,7 @@ public class PlayerControl : MonoBehaviour {
     private static readonly int paramIdIsGliding = Animator.StringToHash("IsGliding");
     private static readonly int paramIdPunch = Animator.StringToHash("Punch");
     private static readonly int paramIdCombo = Animator.StringToHash("Combo");
+    private static readonly int paramIdCameraMode = Animator.StringToHash("CameraMode");
 
 
 
@@ -242,7 +243,13 @@ public class PlayerControl : MonoBehaviour {
     }
 
     private void OnChangePerspective() {
-        _animator.SetTrigger(paramIdChangePerspective);
+        //_animator.SetTrigger(paramIdChangePerspective);
+        if(_cameraControl.cameraState == CameraState.ThirdPerson) {
+            _animator.SetInteger(paramIdCameraMode, 0);
+        }
+        else if(_cameraControl.cameraState == CameraState.FirstPerson) {
+            _animator.SetInteger(paramIdCameraMode, 1);
+        }
     }
 
     //Function to hides cursor
