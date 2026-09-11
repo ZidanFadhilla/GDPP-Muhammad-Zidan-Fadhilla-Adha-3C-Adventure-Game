@@ -156,9 +156,18 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""CancelClimbGlide"",
+                    ""name"": ""CancelClimb"",
                     ""type"": ""Button"",
                     ""id"": ""2985603e-f82f-49b6-9675-99a474431629"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""CancelGlide"",
+                    ""type"": ""Button"",
+                    ""id"": ""96b29514-ff6d-4ac8-ab5b-833968fc140b"",
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
@@ -367,7 +376,7 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
-                    ""action"": ""CancelClimbGlide"",
+                    ""action"": ""CancelClimb"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -390,6 +399,17 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
                     ""action"": ""MainMenu"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f1d77fa1-fb67-4666-94cd-d23c3c4510b8"",
+                    ""path"": ""<Keyboard>/c"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""CancelGlide"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -424,7 +444,8 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
         m_Gameplay_PerspectiveShift = m_Gameplay.FindAction("PerspectiveShift", throwIfNotFound: true);
         m_Gameplay_Climb = m_Gameplay.FindAction("Climb", throwIfNotFound: true);
         m_Gameplay_Glide = m_Gameplay.FindAction("Glide", throwIfNotFound: true);
-        m_Gameplay_CancelClimbGlide = m_Gameplay.FindAction("CancelClimbGlide", throwIfNotFound: true);
+        m_Gameplay_CancelClimb = m_Gameplay.FindAction("CancelClimb", throwIfNotFound: true);
+        m_Gameplay_CancelGlide = m_Gameplay.FindAction("CancelGlide", throwIfNotFound: true);
         m_Gameplay_Attack = m_Gameplay.FindAction("Attack", throwIfNotFound: true);
         m_Gameplay_MainMenu = m_Gameplay.FindAction("MainMenu", throwIfNotFound: true);
     }
@@ -514,7 +535,8 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_PerspectiveShift;
     private readonly InputAction m_Gameplay_Climb;
     private readonly InputAction m_Gameplay_Glide;
-    private readonly InputAction m_Gameplay_CancelClimbGlide;
+    private readonly InputAction m_Gameplay_CancelClimb;
+    private readonly InputAction m_Gameplay_CancelGlide;
     private readonly InputAction m_Gameplay_Attack;
     private readonly InputAction m_Gameplay_MainMenu;
     /// <summary>
@@ -557,9 +579,13 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Glide => m_Wrapper.m_Gameplay_Glide;
         /// <summary>
-        /// Provides access to the underlying input action "Gameplay/CancelClimbGlide".
+        /// Provides access to the underlying input action "Gameplay/CancelClimb".
         /// </summary>
-        public InputAction @CancelClimbGlide => m_Wrapper.m_Gameplay_CancelClimbGlide;
+        public InputAction @CancelClimb => m_Wrapper.m_Gameplay_CancelClimb;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/CancelGlide".
+        /// </summary>
+        public InputAction @CancelGlide => m_Wrapper.m_Gameplay_CancelGlide;
         /// <summary>
         /// Provides access to the underlying input action "Gameplay/Attack".
         /// </summary>
@@ -615,9 +641,12 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
             @Glide.started += instance.OnGlide;
             @Glide.performed += instance.OnGlide;
             @Glide.canceled += instance.OnGlide;
-            @CancelClimbGlide.started += instance.OnCancelClimbGlide;
-            @CancelClimbGlide.performed += instance.OnCancelClimbGlide;
-            @CancelClimbGlide.canceled += instance.OnCancelClimbGlide;
+            @CancelClimb.started += instance.OnCancelClimb;
+            @CancelClimb.performed += instance.OnCancelClimb;
+            @CancelClimb.canceled += instance.OnCancelClimb;
+            @CancelGlide.started += instance.OnCancelGlide;
+            @CancelGlide.performed += instance.OnCancelGlide;
+            @CancelGlide.canceled += instance.OnCancelGlide;
             @Attack.started += instance.OnAttack;
             @Attack.performed += instance.OnAttack;
             @Attack.canceled += instance.OnAttack;
@@ -656,9 +685,12 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
             @Glide.started -= instance.OnGlide;
             @Glide.performed -= instance.OnGlide;
             @Glide.canceled -= instance.OnGlide;
-            @CancelClimbGlide.started -= instance.OnCancelClimbGlide;
-            @CancelClimbGlide.performed -= instance.OnCancelClimbGlide;
-            @CancelClimbGlide.canceled -= instance.OnCancelClimbGlide;
+            @CancelClimb.started -= instance.OnCancelClimb;
+            @CancelClimb.performed -= instance.OnCancelClimb;
+            @CancelClimb.canceled -= instance.OnCancelClimb;
+            @CancelGlide.started -= instance.OnCancelGlide;
+            @CancelGlide.performed -= instance.OnCancelGlide;
+            @CancelGlide.canceled -= instance.OnCancelGlide;
             @Attack.started -= instance.OnAttack;
             @Attack.performed -= instance.OnAttack;
             @Attack.canceled -= instance.OnAttack;
@@ -768,12 +800,19 @@ public partial class @PlayerInput: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnGlide(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "CancelClimbGlide" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "CancelClimb" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnCancelClimbGlide(InputAction.CallbackContext context);
+        void OnCancelClimb(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "CancelGlide" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnCancelGlide(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "Attack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

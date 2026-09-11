@@ -70,9 +70,18 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "CancelClimbGlide",
+                    "name": "CancelClimb",
                     "type": "Button",
                     "id": "2985603e-f82f-49b6-9675-99a474431629",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "CancelGlide",
+                    "type": "Button",
+                    "id": "96b29514-ff6d-4ac8-ab5b-833968fc140b",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -281,7 +290,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "CancelClimbGlide",
+                    "action": "CancelClimb",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -304,6 +313,17 @@
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
                     "action": "MainMenu",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f1d77fa1-fb67-4666-94cd-d23c3c4510b8",
+                    "path": "<Keyboard>/c",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "CancelGlide",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

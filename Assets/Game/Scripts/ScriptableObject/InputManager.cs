@@ -15,7 +15,8 @@ public class InputManager : ScriptableObject, PlayerInput.IGameplayActions {
     public event UnityAction PerspectiveShiftEvent = delegate { };
     public event UnityAction ClimbEvent = delegate { };
     public event UnityAction GlideEvent = delegate { };
-    public event UnityAction CancelClimbGlideEvent = delegate { };
+    public event UnityAction CancelClimbEvent = delegate { };
+    public event UnityAction CancelGlideEvent = delegate { };
     public event UnityAction AttackEvent = delegate { };
     public event UnityAction AttackCancelledEvent = delegate { };
     public event UnityAction OpenMainMenuEvent = delegate { };
@@ -83,9 +84,15 @@ public class InputManager : ScriptableObject, PlayerInput.IGameplayActions {
         }
     }
 
-    public void OnCancelClimbGlide(InputAction.CallbackContext context) {
+    public void OnCancelClimb(InputAction.CallbackContext context) {
         if(context.phase == InputActionPhase.Performed) {
-            CancelClimbGlideEvent.Invoke();
+            CancelClimbEvent.Invoke();
+        }
+    }
+
+    public void OnCancelGlide(InputAction.CallbackContext context) {
+        if(context.phase == InputActionPhase.Performed) {
+            CancelGlideEvent.Invoke();
         }
     }
 

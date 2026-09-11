@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEngine;
@@ -15,8 +17,24 @@ public class PlayerControl : MonoBehaviour {
     [SerializeField]
     private CameraControl _cameraControl;
 
-    
-    
+    //Animation param hash id container
+    //To-Do : move to dedicated classes for later implementation
+    private static readonly int paramIdVelocity = Animator.StringToHash("Velocity");
+    private static readonly int paramIdVelocityX = Animator.StringToHash("VelocityX");
+    private static readonly int paramIdVelocityZ = Animator.StringToHash("VelocityZ");
+    private static readonly int paramIdChangePerspective = Animator.StringToHash("ChangePerspective");
+    private static readonly int paramIdIsGrounded = Animator.StringToHash("IsGrounded");
+    private static readonly int paramIdJump = Animator.StringToHash("Jump");
+    private static readonly int paramIdIsCrouch = Animator.StringToHash("IsCrouch");
+    private static readonly int paramIdIsClimbing = Animator.StringToHash("IsClimbing");
+    private static readonly int paramIdClimbVelocityX = Animator.StringToHash("ClimbVelocityX");
+    private static readonly int paramIdClimbVelocityY = Animator.StringToHash("ClimbVelocityY");
+    private static readonly int paramIdIsGliding = Animator.StringToHash("IsGliding");
+    private static readonly int paramIdPunch = Animator.StringToHash("Punch");
+    private static readonly int paramIdCombo = Animator.StringToHash("Combo");
+
+
+
     //Components
     [SerializeField]
     private Rigidbody _rigidbody;
@@ -100,7 +118,34 @@ public class PlayerControl : MonoBehaviour {
     [SerializeField]
     private float _climbSpeed;
 
-    
+    //Gliding
+    [SerializeField]
+    private Vector3 _glideRotationSpeed;
+    [SerializeField]
+    private float _minGlideRotationX;
+    [SerializeField]
+    private float _maxGlideRotationY;
+    [SerializeField]
+    private float _glideSpeed;
+    [SerializeField]
+    private float _airDrag;
+
+    //Attacking
+    [SerializeField]
+    private bool _isAttacking;
+    private int _combo = 0;
+    [SerializeField]
+    private float _resetComboInterval;
+    private Coroutine _resetCombo;
+
+    //Collision when attacking
+    [SerializeField]
+    private Transform _hitDetector;
+    [SerializeField]
+    private float _hitDetectorRadius;
+    [SerializeField]
+    private LayerMask _hitLayer;
+
     private void Awake() {
         //Assign MainCamera dan CameraControl
         _cameraTransform = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<Transform>();
@@ -112,30 +157,56 @@ public class PlayerControl : MonoBehaviour {
         _animator = GetComponent<Animator>();
         _groundDetector = transform.Find("GroundDetector");
         _climbDetector = transform.Find("ClimbDetector");
+        _hitDetector = transform.Find("HitDetector");
 
         //Initial Stance
         _playerStance = PlayerStance.Stand;
 
 
-        //Default value
-
+        //Initial value. Set here to avoid forgetting to set value on inspector to reasonable one
+        //Speeds
         _walkSpeed = _walkSpeed > 0 ? _walkSpeed : 350;
         _runSpeed = _runSpeed > _walkSpeed ? _runSpeed : _walkSpeed + 100;
         _crouchSpeed = (0 < _crouchSpeed) && (_crouchSpeed < _walkSpeed) ? _crouchSpeed : _walkSpeed - 25;
+        _climbSpeed = _climbSpeed > 0 ? _climbSpeed : 20;
+        _glideSpeed = _glideSpeed > 0 ? _glideSpeed : 70;
 
+
+        //Player model rotation smoothing
         _rotationSmoothTime = _rotationSmoothTime > 0 ? _rotationSmoothTime : 0.1f;
-        _upperStepOffset = _upperStepOffset == Vector3.zero ? new Vector3(0, 0.3f, 0.3f) : _upperStepOffset;
+
+        //Stepped ground checks value
         _stepCheckerDistance = _stepCheckerDistance > 0 ? _stepCheckerDistance : 0.1f;
-        _stepForce = _stepForce > 0 ? _stepForce : 400f;
+        _upperStepOffset = _upperStepOffset == Vector3.zero ? new Vector3(0, 0.3f, 0.3f) : _upperStepOffset;
+
+        //Grounded collision detector radius
         _groundDetectorRadius = _groundDetectorRadius > 0 ? _groundDetectorRadius : 0.2f;
+
+        //Vertical forces
+        _stepForce = _stepForce > 0 ? _stepForce : 400f;
         _jumpForce = _jumpForce > 0 ? _jumpForce : 500;
+
+        //Drags (currently ground drag use 1 as per recommended value)
+        _airDrag = _airDrag >= 0 ? _airDrag : 5; 
+
+        //Climbing stance transition value
         _climbCheckDistance = _climbCheckDistance > 0 ? _climbCheckDistance : 1;
         _climbOffset = _climbOffset == Vector3.zero ? new Vector3(0, 1, 0.16f) : _climbOffset;
-        _climbSpeed = _climbSpeed > 0 ? _climbSpeed : 20;
 
-        //
+        //Glide movement values
+        _glideRotationSpeed = _glideRotationSpeed == Vector3.zero ? new Vector3(20, 40, 20) : _glideRotationSpeed;
+        _minGlideRotationX = -10;
+        _maxGlideRotationY = 14;
+
+        //Set speed to walk speed as initial state
         _speed = _walkSpeed;
 
+        //Combo intervals and combo reset intervals
+        _resetComboInterval = 5;
+
+        //Hit variable values
+        _hitDetectorRadius = 1;
+        _hitLayer = LayerMask.GetMask("Destroyable");
 
         //Hides Cursor
         HideAndLockCursor();
@@ -149,9 +220,11 @@ public class PlayerControl : MonoBehaviour {
         _inputManager.RunCancelledEvent += OnStopRun;   
         _inputManager.ClimbEvent += OnClimb;
         _inputManager.GlideEvent += OnGlide;
-        _inputManager.CancelClimbGlideEvent += OnCancelClimb;
+        _inputManager.CancelClimbEvent += OnCancelClimb;
+        _inputManager.CancelGlideEvent += OnCancelGlide;
         _inputManager.CrouchEvent += OnCrouch;
         _inputManager.PerspectiveShiftEvent += OnChangePerspective;
+        _inputManager.AttackEvent += OnAttack;
     }
 
     private void OnDisable() {
@@ -160,13 +233,15 @@ public class PlayerControl : MonoBehaviour {
         _inputManager.RunEvent -= OnRun;
         _inputManager.RunCancelledEvent -= OnStopRun;
         _inputManager.ClimbEvent -= OnClimb;
-        _inputManager.CancelClimbGlideEvent -= OnCancelClimb;
-        _inputManager.CrouchEvent += OnCrouch;
+        _inputManager.CancelClimbEvent -= OnCancelClimb;
+        _inputManager.CancelGlideEvent -= OnCancelGlide;
+        _inputManager.CrouchEvent -= OnCrouch;
         _inputManager.PerspectiveShiftEvent -= OnChangePerspective;
+        _inputManager.AttackEvent -= OnAttack;
     }
 
     private void OnChangePerspective() {
-        _animator.SetTrigger("ChangePerspective");
+        _animator.SetTrigger(paramIdChangePerspective);
     }
 
     //Function to hides cursor
@@ -188,7 +263,7 @@ public class PlayerControl : MonoBehaviour {
         Vector3 velocity = _rigidbody.linearVelocity;
         float velocityMagnitude = _rigidbody.linearVelocity.magnitude;
 
-        if (_playerStance == PlayerStance.Stand || _playerStance == PlayerStance.Crouch) {
+        if ((_playerStance == PlayerStance.Stand || _playerStance == PlayerStance.Crouch) && !_isAttacking) {
             switch(_cameraControl.cameraState) {
                 case CameraState.ThirdPerson:
                     if (moveValue.magnitude >= 0.1) {
@@ -237,9 +312,9 @@ public class PlayerControl : MonoBehaviour {
             Debug.Log(velocity);
             Debug.Log(velocityMagnitude);
             CheckStep();
-            _animator.SetFloat("Velocity", velocityMagnitude * moveValue.magnitude);
-            _animator.SetFloat("VelocityZ", velocityMagnitude * moveValue.y);
-            _animator.SetFloat("VelocityX", velocityMagnitude * moveValue.x);
+            _animator.SetFloat(paramIdVelocity, velocityMagnitude * moveValue.magnitude);
+            _animator.SetFloat(paramIdClimbVelocityX, velocityMagnitude * moveValue.y);
+            _animator.SetFloat(paramIdClimbVelocityY, velocityMagnitude * moveValue.x);
         }
         else if (_playerStance == PlayerStance.Climb) {
             Vector3 horizontal = moveValue.x * transform.right;
@@ -253,16 +328,38 @@ public class PlayerControl : MonoBehaviour {
                 _rigidbody.linearVelocity = Vector3.zero;
             }
 
-            _animator.SetFloat("ClimbVelocityX", velocityMagnitude * moveValue.x);
-            _animator.SetFloat("ClimbVelocityY", velocityMagnitude * moveValue.y);
+            _animator.SetFloat(paramIdClimbVelocityX, velocityMagnitude * moveValue.x);
+            _animator.SetFloat(paramIdClimbVelocityY, velocityMagnitude * moveValue.y);
 
 
+        }
+        else if (_playerStance == PlayerStance.Glide) {
+            
+            
+            Vector3 rotationDegree = transform.rotation.eulerAngles;
+            rotationDegree.x += _glideRotationSpeed.x * moveValue.y * Time.deltaTime;
+            rotationDegree.x = Mathf.Clamp(rotationDegree.x, _minGlideRotationX, _maxGlideRotationY);
+            rotationDegree.z += _glideRotationSpeed.z * moveValue.x * Time.deltaTime;
+            rotationDegree.y += _glideRotationSpeed.y * moveValue.x * Time.deltaTime;
+            transform.rotation = Quaternion.Euler(rotationDegree);
         }
 
         //Movement with rotation
 
         //Debug.Log(moveDirection);
         //Debug.Log(moveDirection * _walkSpeed * Time.deltaTime);
+    }
+
+    //Function to process natural force that applies to gliding position
+    private void GlideForce() {
+        if (_playerStance == PlayerStance.Glide) {
+            Vector3 playerRotation = transform.rotation.eulerAngles;
+            float lift = playerRotation.x;
+            Vector3 upForce = transform.up * (lift + _airDrag);
+            Vector3 forwardForce = transform.forward * _glideSpeed;
+            Vector3 totalForce = upForce + forwardForce;
+            _rigidbody.AddForce(totalForce * Time.deltaTime);
+        }
     }
 
     //Function to check if a surface with different elevation can be stepped into by player character
@@ -290,14 +387,14 @@ public class PlayerControl : MonoBehaviour {
             _playerStance = PlayerStance.Crouch;
             _collider.height = 1.3f;
             _collider.center = Vector3.up * 0.66f;
-            _animator.SetBool("IsCrouch", true);
+            _animator.SetBool(paramIdIsCrouch, true);
             _speed = _crouchSpeed;
         }
         else if (_playerStance == PlayerStance.Crouch) {
             _playerStance = PlayerStance.Stand;
             _collider.height = 1.8f;
             _collider.center = Vector3.up * 0.9f;
-            _animator.SetBool("IsCrouch", false);
+            _animator.SetBool(paramIdIsCrouch, false);
             _speed = _walkSpeed;
         }
     }
@@ -307,7 +404,7 @@ public class PlayerControl : MonoBehaviour {
         Vector3 jumpDirection = Vector3.up;
         if (_isGrounded) {
             _rigidbody.AddForce(jumpDirection * _jumpForce);
-            _animator.SetTrigger("Jump");
+            _animator.SetTrigger(paramIdJump);
             Debug.Log("Player jumped!");
         }
     }
@@ -315,10 +412,13 @@ public class PlayerControl : MonoBehaviour {
     //Check if character is grounded
     private void CheckIsGrounded() {
         _isGrounded = Physics.CheckSphere(_groundDetector.position, _groundDetectorRadius, _groundLayer);
-        _animator.SetBool("IsGrounded", _isGrounded);
+        _animator.SetBool(paramIdIsGrounded, _isGrounded);
+        if (_isGrounded) {
+            OnCancelGlide();
+        }
     }
 
-    //Function to enter the climbing stance
+    //Function to enter the climbing state
     private void OnClimb() {
         bool isInFrontOfClimbingWall = Physics.Raycast(_climbDetector.position, transform.forward, out RaycastHit hit, _climbCheckDistance, _climbableLayer);
 
@@ -331,11 +431,12 @@ public class PlayerControl : MonoBehaviour {
             transform.position = hit.point - offset;
             _collider.center = Vector3.up * 1.3f;
             _rigidbody.useGravity = false;
-            _animator.SetBool("IsClimbing", true);
+            _animator.SetBool(paramIdIsClimbing, true);
         }
     }
 
 
+    //Function to exit glide state
     private void OnCancelClimb() {
         if (_playerStance == PlayerStance.Climb) {
             _playerStance = PlayerStance.Stand;
@@ -343,21 +444,75 @@ public class PlayerControl : MonoBehaviour {
             _rigidbody.useGravity = true;
             transform.position -= transform.forward * 1f;
             _cameraControl.SetFPSClampedCamera(false, transform.rotation.eulerAngles);
-            _animator.SetBool("IsClimbing", false);
+            _animator.SetBool(paramIdIsClimbing, false);
         }
     }
 
+    //Function to enter glide state
     private void OnGlide() {
+        bool isNotGliding = _playerStance != PlayerStance.Glide;
 
+        if (!_isGrounded && isNotGliding) {
+            _playerStance = PlayerStance.Glide;
+            _cameraControl.SetFPSClampedCamera(true, transform.rotation.eulerAngles);
+            _animator.SetBool(paramIdIsGliding, true);
+        }
     }
     
-    private void OnCancelGlide() {
 
+    //Function to exit glide state
+    private void OnCancelGlide() {
+        if(_playerStance == PlayerStance.Glide) {
+            _playerStance = PlayerStance.Stand;
+            _cameraControl.SetFPSClampedCamera(false, transform.rotation.eulerAngles);
+            _animator.SetBool(paramIdIsGliding, false);
+        }
+    }
+
+    private void OnAttack() {
+        if(!_isAttacking && _playerStance == PlayerStance.Stand) {
+            _isAttacking = true;
+            if (_combo < 3) {
+                _combo++;
+            }
+            else {
+                _combo = 1;
+            }
+            _animator.SetInteger(paramIdCombo, _combo);
+            _animator.SetTrigger(paramIdPunch);
+             
+        }
+    }
+
+    private void OnAttackEnd() {
+        //Control how long after button unpressed that you can attack again
+        _isAttacking = false;
+        if (_resetCombo != null) {
+            StopCoroutine(_resetCombo);
+        }
+        _resetCombo = StartCoroutine(ResetCombo());
+    }
+
+    private IEnumerator ResetCombo() {
+        yield return new WaitForSeconds(_resetComboInterval);
+        _combo = 0;
+    }
+    
+    private void Hit() {
+        Collider[] hitObjects = Physics.OverlapSphere(_hitDetector.position, _hitDetectorRadius, _hitLayer);
+        for(int i = 0; i < hitObjects.Length; i++) {
+            if (hitObjects[i].gameObject != null) {
+                Destroy(hitObjects[i].gameObject);
+            }
+        }
     }
 
     private void FixedUpdate() {
         //updating grounded check
         CheckIsGrounded();
+        //Applying glideforce
+        GlideForce();
+        //Process movement forces in current stance
         ProcessMove();
     }
 
