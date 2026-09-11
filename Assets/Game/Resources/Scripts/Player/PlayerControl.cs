@@ -214,8 +214,7 @@ public class PlayerControl : MonoBehaviour {
         HideAndLockCursor();
     }
 
-    private void OnEnable() {   
-        _inputManager = AssetDatabase.LoadAssetAtPath<InputManager>("Assets/Game/Scripts/ScriptableObject/InputManager.asset");
+    private void OnEnable() {
         _inputManager.MoveEvent += OnMove;
         _inputManager.JumpEvent += OnJump;
         _inputManager.RunEvent += OnRun;

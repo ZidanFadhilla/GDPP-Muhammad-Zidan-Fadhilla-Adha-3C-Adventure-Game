@@ -5,6 +5,7 @@ using UnityEngine;
 public class CameraControl : MonoBehaviour
 {
     //Input Manager
+    [SerializeField]
     private InputManager _inputManager;
 
 
@@ -26,7 +27,6 @@ public class CameraControl : MonoBehaviour
     }
 
     private void OnEnable() {
-        _inputManager = AssetDatabase.LoadAssetAtPath<InputManager>("Assets/Game/Scripts/ScriptableObject/InputManager.asset");
         _inputManager.PerspectiveShiftEvent += SwitchCamera;
     }
 

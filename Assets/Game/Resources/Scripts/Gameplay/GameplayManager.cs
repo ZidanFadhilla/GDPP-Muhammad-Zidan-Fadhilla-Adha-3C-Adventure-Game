@@ -4,10 +4,10 @@ using UnityEngine.SceneManagement;
 
 public class GameplayManager : MonoBehaviour {
 
+    [SerializeField]
     private InputManager _inputManager;
 
     private void OnEnable() {
-        _inputManager = AssetDatabase.LoadAssetAtPath<InputManager>("Assets/Game/Scripts/ScriptableObject/InputManager.asset");
         _inputManager.OpenMainMenuEvent += BackToMainMenu;
     }
 
