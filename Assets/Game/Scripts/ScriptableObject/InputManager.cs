@@ -5,6 +5,7 @@ using UnityEngine.Events;
 [CreateAssetMenu(fileName = "InputManager", menuName = "ScriptableObjects/InputManager")]
 public class InputManager : ScriptableObject, PlayerInput.IGameplayActions {
     //Gameplay
+    //Event set to delegate as a way to avoid doing null check using If/Else, to avoid race condition with null check
     public event UnityAction<Vector2> MoveEvent = delegate { };
     public event UnityAction JumpEvent = delegate { };
     public event UnityAction RunEvent = delegate { };

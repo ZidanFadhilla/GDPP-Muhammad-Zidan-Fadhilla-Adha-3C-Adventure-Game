@@ -1,3 +1,4 @@
+using System;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEngine;
@@ -14,14 +15,22 @@ public class PlayerControl : MonoBehaviour {
     [SerializeField]
     private CameraControl _cameraControl;
 
+    
+    
     //Components
     [SerializeField]
     private Rigidbody _rigidbody;
     [SerializeField]
     private PlayerInput _playerInput;
+    [SerializeField]
+    private Animator _animator;
+    [SerializeField]
+    private CapsuleCollider _collider;
+
 
 
     //Stance
+    [SerializeField]
     private PlayerStance _playerStance;
 
     //MovementValues
@@ -34,6 +43,8 @@ public class PlayerControl : MonoBehaviour {
     private float _walkSpeed;
     [SerializeField]
     private float _runSpeed;
+    [SerializeField]
+    private float _crouchSpeed;
     [SerializeField]
     private float _walkSpeedTransition = 30;
     [SerializeField]
@@ -97,6 +108,8 @@ public class PlayerControl : MonoBehaviour {
 
         //Assign components to variables
         _rigidbody = GetComponent<Rigidbody>();
+        _collider = GetComponent<CapsuleCollider>();
+        _animator = GetComponent<Animator>();
         _groundDetector = transform.Find("GroundDetector");
         _climbDetector = transform.Find("ClimbDetector");
 
@@ -107,11 +120,13 @@ public class PlayerControl : MonoBehaviour {
         //Default value
 
         _walkSpeed = _walkSpeed > 0 ? _walkSpeed : 350;
+        _runSpeed = _runSpeed > _walkSpeed ? _runSpeed : _walkSpeed + 100;
+        _crouchSpeed = (0 < _crouchSpeed) && (_crouchSpeed < _walkSpeed) ? _crouchSpeed : _walkSpeed - 25;
+
         _rotationSmoothTime = _rotationSmoothTime > 0 ? _rotationSmoothTime : 0.1f;
         _upperStepOffset = _upperStepOffset == Vector3.zero ? new Vector3(0, 0.3f, 0.3f) : _upperStepOffset;
         _stepCheckerDistance = _stepCheckerDistance > 0 ? _stepCheckerDistance : 0.1f;
         _stepForce = _stepForce > 0 ? _stepForce : 400f;
-        _runSpeed = _runSpeed > _walkSpeed ? _runSpeed : _walkSpeed + 100;
         _groundDetectorRadius = _groundDetectorRadius > 0 ? _groundDetectorRadius : 0.2f;
         _jumpForce = _jumpForce > 0 ? _jumpForce : 500;
         _climbCheckDistance = _climbCheckDistance > 0 ? _climbCheckDistance : 1;
@@ -133,7 +148,10 @@ public class PlayerControl : MonoBehaviour {
         _inputManager.RunEvent += OnRun;
         _inputManager.RunCancelledEvent += OnStopRun;   
         _inputManager.ClimbEvent += OnClimb;
+        _inputManager.GlideEvent += OnGlide;
         _inputManager.CancelClimbGlideEvent += OnCancelClimb;
+        _inputManager.CrouchEvent += OnCrouch;
+        _inputManager.PerspectiveShiftEvent += OnChangePerspective;
     }
 
     private void OnDisable() {
@@ -143,6 +161,12 @@ public class PlayerControl : MonoBehaviour {
         _inputManager.RunCancelledEvent -= OnStopRun;
         _inputManager.ClimbEvent -= OnClimb;
         _inputManager.CancelClimbGlideEvent -= OnCancelClimb;
+        _inputManager.CrouchEvent += OnCrouch;
+        _inputManager.PerspectiveShiftEvent -= OnChangePerspective;
+    }
+
+    private void OnChangePerspective() {
+        _animator.SetTrigger("ChangePerspective");
     }
 
     //Function to hides cursor
@@ -152,7 +176,7 @@ public class PlayerControl : MonoBehaviour {
     }
 
     //Function to check for movement vector2 value. Listening to 'Move' InputAction
-    public void OnMove(Vector2 movement) {
+    private void OnMove(Vector2 movement) {
         moveValue = movement;
         Debug.Log(moveValue);
     }
@@ -160,7 +184,11 @@ public class PlayerControl : MonoBehaviour {
 
     //Function to process Vector2 value read through the OnMove function;
     private void ProcessMove() {
-        if (_playerStance == PlayerStance.Stand) {
+
+        Vector3 velocity = _rigidbody.linearVelocity;
+        float velocityMagnitude = _rigidbody.linearVelocity.magnitude;
+
+        if (_playerStance == PlayerStance.Stand || _playerStance == PlayerStance.Crouch) {
             switch(_cameraControl.cameraState) {
                 case CameraState.ThirdPerson:
                     if (moveValue.magnitude >= 0.1) {
@@ -188,24 +216,47 @@ public class PlayerControl : MonoBehaviour {
                     Debug.Log("Player has no camera mode");
                     break;
             }
-            
+
+            //Running logic. If running then slowly increase _speed until _speed = _runSpeed. If not running then decrease _speed until
+            //_speed = _walkspeed 
+            if (isRunning && _playerStance == PlayerStance.Stand) {
+                if (_speed < _runSpeed) {
+                    _speed = _speed + _walkSpeedTransition * Time.deltaTime;
+                }
+            }
+            else {
+                if (_speed > _walkSpeed) {
+                    _speed = _speed - _walkSpeedTransition * Time.deltaTime;
+                }
+            }
 
             //Implementation of Addforce in FixedUpdate due to new inputAction don't use continual firing of function
-            _rigidbody.AddForce(moveDirection * _speed * Time.deltaTime);
+
+            _rigidbody.AddForce((moveDirection * (_speed - velocityMagnitude)) * Time.deltaTime);
+            Debug.Log(moveValue * _speed * Time.deltaTime);
+            Debug.Log(velocity);
+            Debug.Log(velocityMagnitude);
             CheckStep();
+            _animator.SetFloat("Velocity", velocityMagnitude * moveValue.magnitude);
+            _animator.SetFloat("VelocityZ", velocityMagnitude * moveValue.y);
+            _animator.SetFloat("VelocityX", velocityMagnitude * moveValue.x);
         }
         else if (_playerStance == PlayerStance.Climb) {
             Vector3 horizontal = moveValue.x * transform.right;
             Vector3 vertical = moveValue.y * transform.up;
             moveDirection = horizontal + vertical;
+
             if (moveDirection != Vector3.zero) {
-                _rigidbody.AddForce(moveDirection * Time.deltaTime * _climbSpeed);
+                _rigidbody.AddForce(moveDirection * Time.deltaTime * (_climbSpeed - velocityMagnitude));
             }
             else {
                 _rigidbody.linearVelocity = Vector3.zero;
             }
-            
-            Debug.Log(moveDirection * Time.deltaTime * _climbSpeed);
+
+            _animator.SetFloat("ClimbVelocityX", velocityMagnitude * moveValue.x);
+            _animator.SetFloat("ClimbVelocityY", velocityMagnitude * moveValue.y);
+
+
         }
 
         //Movement with rotation
@@ -226,19 +277,37 @@ public class PlayerControl : MonoBehaviour {
 
 
     //Function to make player run by shifting player to run mode. Listening to 'Run' InputAction
-    public void OnRun() {
+    private void OnRun() {
         isRunning = true;
     }
 
-    public void OnStopRun() {
+    private void OnStopRun() {
         isRunning = false;
     }
 
+    private void OnCrouch() {
+        if (_playerStance == PlayerStance.Stand) {
+            _playerStance = PlayerStance.Crouch;
+            _collider.height = 1.3f;
+            _collider.center = Vector3.up * 0.66f;
+            _animator.SetBool("IsCrouch", true);
+            _speed = _crouchSpeed;
+        }
+        else if (_playerStance == PlayerStance.Crouch) {
+            _playerStance = PlayerStance.Stand;
+            _collider.height = 1.8f;
+            _collider.center = Vector3.up * 0.9f;
+            _animator.SetBool("IsCrouch", false);
+            _speed = _walkSpeed;
+        }
+    }
+
     //Function to make player jump. Listening to 'Jump' InputAction
-    public void OnJump() {
+    private void OnJump() {
         Vector3 jumpDirection = Vector3.up;
         if (_isGrounded) {
             _rigidbody.AddForce(jumpDirection * _jumpForce);
+            _animator.SetTrigger("Jump");
             Debug.Log("Player jumped!");
         }
     }
@@ -246,51 +315,49 @@ public class PlayerControl : MonoBehaviour {
     //Check if character is grounded
     private void CheckIsGrounded() {
         _isGrounded = Physics.CheckSphere(_groundDetector.position, _groundDetectorRadius, _groundLayer);
+        _animator.SetBool("IsGrounded", _isGrounded);
     }
 
     //Function to enter the climbing stance
-    public void OnClimb() {
+    private void OnClimb() {
         bool isInFrontOfClimbingWall = Physics.Raycast(_climbDetector.position, transform.forward, out RaycastHit hit, _climbCheckDistance, _climbableLayer);
 
         bool isNotClimbing = _playerStance != PlayerStance.Climb;
 
-        if (isInFrontOfClimbingWall && isNotClimbing) {
+        if (isInFrontOfClimbingWall && _isGrounded && isNotClimbing) {
+            _playerStance = PlayerStance.Climb;
             Vector3 offset = (transform.forward * _climbOffset.z) + (Vector3.up * _climbOffset.y);
             _cameraControl.SetFPSClampedCamera(true, transform.rotation.eulerAngles);
             transform.position = hit.point - offset;
-            _playerStance = PlayerStance.Climb;
+            _collider.center = Vector3.up * 1.3f;
             _rigidbody.useGravity = false;
+            _animator.SetBool("IsClimbing", true);
         }
     }
 
 
-    public void OnCancelClimb() {
+    private void OnCancelClimb() {
         if (_playerStance == PlayerStance.Climb) {
             _playerStance = PlayerStance.Stand;
+            _collider.center = Vector3.up * 0.9f;
             _rigidbody.useGravity = true;
             transform.position -= transform.forward * 1f;
             _cameraControl.SetFPSClampedCamera(false, transform.rotation.eulerAngles);
+            _animator.SetBool("IsClimbing", false);
         }
     }
 
+    private void OnGlide() {
+
+    }
+    
+    private void OnCancelGlide() {
+
+    }
 
     private void FixedUpdate() {
         //updating grounded check
         CheckIsGrounded();
-
-        //Runing logic
-        if (isRunning) {
-            if (_speed < _runSpeed) {
-                _speed = _speed + _walkSpeedTransition * Time.deltaTime;
-            }
-        }
-        else {
-            if (_speed > _walkSpeed) {
-                _speed = _speed - _walkSpeedTransition * Time.deltaTime;
-            }
-        }
-
-
         ProcessMove();
     }
 
